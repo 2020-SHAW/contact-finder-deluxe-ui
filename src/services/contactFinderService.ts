@@ -55,7 +55,7 @@ export const contactFinderService = {
           updatedJob.current_step || '',
           updatedJob.status_message || '',
           updatedJob.progress || 0,
-          3 // Total steps
+          100 // Total steps represented as percentage
         );
         
         if (updatedJob.status === 'completed' || updatedJob.status === 'failed') {
@@ -65,7 +65,7 @@ export const contactFinderService = {
       
       // Wait for the job to complete (with timeout)
       let attempts = 0;
-      const maxAttempts = 60; // 1 minute timeout
+      const maxAttempts = 180; // 3 minutes timeout
       
       while (attempts < maxAttempts) {
         const { data: checkJob, error: checkError } = await supabase
@@ -124,7 +124,7 @@ export const contactFinderService = {
   
   // Generate CSV download for the results
   generateCSV(contacts: ContactResult[]): string {
-    const headers = ["Name", "Email", "Phone", "Website", "Social Media"];
+    const headers = ["Name", "Email", "Phone", "Website", "Social Media", "Niche", "Location"];
     
     const csvRows = [
       headers.join(','),
@@ -134,8 +134,10 @@ export const contactFinderService = {
           contact.email || '',
           contact.phone || '',
           contact.website || '',
-          contact.socialMedia || ''
-        ].map(value => `"${value.replace(/"/g, '""')}"`).join(',');
+          contact.socialMedia || '',
+          contact.niche || '',
+          contact.location || ''
+        ].map(value => `"${(value+'').replace(/"/g, '""')}"`).join(',');
       })
     ];
     

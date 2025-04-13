@@ -1,5 +1,6 @@
 
 import { cn } from "@/lib/utils";
+import { Progress } from "@/components/ui/progress";
 
 interface SearchStatusProps {
   currentStep: string;
@@ -17,17 +18,12 @@ export function SearchStatus({
   const percentage = Math.round((completedSteps / totalSteps) * 100);
 
   return (
-    <div className="w-full space-y-2">
+    <div className="w-full space-y-3">
       <div className="flex justify-between text-sm">
-        <span>{currentStep}</span>
+        <span className="font-semibold">{currentStep}</span>
         <span>{percentage}% Complete</span>
       </div>
-      <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
-        <div
-          className="h-full bg-primary transition-all duration-500"
-          style={{ width: `${percentage}%` }}
-        ></div>
-      </div>
+      <Progress value={percentage} className="h-2" />
       <p className="text-sm text-muted-foreground animate-pulse">{statusText}</p>
     </div>
   );
