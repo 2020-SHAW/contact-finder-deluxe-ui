@@ -8,6 +8,7 @@ import { SearchStatus } from "@/components/SearchStatus";
 import { ResultsTable } from "@/components/ResultsTable";
 import { contactFinderService } from "@/services/contactFinderService";
 import { ContactResult } from "@/types/contact";
+import { toast } from "@/hooks/use-toast";
 
 const Index = () => {
   const [isSearching, setIsSearching] = useState(false);
@@ -38,9 +39,17 @@ const Index = () => {
       );
       
       setSearchResults(results);
+      toast({
+        title: "Search completed",
+        description: `Found ${results.length} contacts for "${niche}" in "${location}"`,
+      });
     } catch (error) {
       console.error("Search error:", error);
-      // Add error handling with toast here
+      toast({
+        title: "Search failed",
+        description: error instanceof Error ? error.message : "An unknown error occurred",
+        variant: "destructive",
+      });
     } finally {
       setIsSearching(false);
     }

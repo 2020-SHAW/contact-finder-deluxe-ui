@@ -83,7 +83,7 @@ export function ResultsTable({ results, onDownload }: ResultsTableProps) {
           <TableBody>
             {filteredResults.length > 0 ? (
               filteredResults.map((result, index) => (
-                <TableRow key={index}>
+                <TableRow key={result.id || index}>
                   <TableCell className="font-medium">{result.name || "N/A"}</TableCell>
                   <TableCell>{result.email || "N/A"}</TableCell>
                   <TableCell>{result.phone || "N/A"}</TableCell>
@@ -95,7 +95,9 @@ export function ResultsTable({ results, onDownload }: ResultsTableProps) {
                         rel="noopener noreferrer"
                         className="text-primary hover:underline"
                       >
-                        {new URL(result.website).hostname}
+                        {result.website.startsWith('http') 
+                          ? new URL(result.website).hostname 
+                          : result.website}
                       </a>
                     ) : (
                       "N/A"

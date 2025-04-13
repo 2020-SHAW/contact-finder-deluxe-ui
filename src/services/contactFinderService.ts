@@ -1,33 +1,125 @@
 
-import { ContactResult, SearchResult } from "@/types/contact";
+import { supabase } from "@/integrations/supabase/client";
+import { ContactResult } from "@/types/contact";
 
-// Simulate API calls that would connect to the Python backend
 export const contactFinderService = {
-  // Simulates the DuckDuckGo search
   async searchContacts(
     niche: string, 
     location: string, 
     onProgress: (step: string, status: string, completed: number, total: number) => void
   ): Promise<ContactResult[]> {
-    // Step 1: Initial search
-    onProgress("Searching", `Running search for "${niche}" in "${location}"...`, 1, 3);
-    
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    
-    // Simulate search results
-    const results: SearchResult[] = generateMockSearchResults(niche, location);
-    
-    // Step 2: Extract basic contact info
-    onProgress("Extracting", "Extracting basic contact information...", 2, 3);
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    
-    // Step 3: Enrich with website scraping
-    onProgress("Enriching", "Scraping websites for additional contact details...", 3, 3);
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    
-    // Return the final results
-    return generateMockContacts(niche, location, 20);
+    try {
+      // Create a new search job in the database
+      const { data: job, error: jobError } = await supabase
+        .from('search_jobs')
+        .insert({
+          niche,
+          location,
+          status: 'pending',
+          current_step: 'Initializing',
+          status_message: 'Starting search...',
+          progress: 0
+        })
+        .select()
+        .single();
+      
+      if (jobError || !job) {
+        console.error("Failed to create search job:", jobError);
+        throw new Error("Failed to create search job");
+      }
+      
+      // Start the scraper function
+      const { error: functionError } = await supabase.functions.invoke('contact-scraper', {
+        body: { niche, location, jobId: job.id }
+      });
+      
+      if (functionError) {
+        console.error("Edge function error:", functionError);
+        throw new Error("Failed to start scraper");
+      }
+      
+      // Start polling for job status updates
+      const intervalId = setInterval(async () => {
+        const { data: updatedJob, error: fetchError } = await supabase
+          .from('search_jobs')
+          .select('*')
+          .eq('id', job.id)
+          .single();
+        
+        if (fetchError || !updatedJob) {
+          console.error("Failed to fetch job status:", fetchError);
+          return;
+        }
+        
+        onProgress(
+          updatedJob.current_step || '',
+          updatedJob.status_message || '',
+          updatedJob.progress || 0,
+          3 // Total steps
+        );
+        
+        if (updatedJob.status === 'completed' || updatedJob.status === 'failed') {
+          clearInterval(intervalId);
+        }
+      }, 1000);
+      
+      // Wait for the job to complete (with timeout)
+      let attempts = 0;
+      const maxAttempts = 60; // 1 minute timeout
+      
+      while (attempts < maxAttempts) {
+        const { data: checkJob, error: checkError } = await supabase
+          .from('search_jobs')
+          .select('*')
+          .eq('id', job.id)
+          .single();
+        
+        if (checkError || !checkJob) {
+          console.error("Failed to check job status:", checkError);
+          break;
+        }
+        
+        if (checkJob.status === 'completed') {
+          // Fetch results from the database
+          const { data: contacts, error: contactsError } = await supabase
+            .from('contact_results')
+            .select('*')
+            .eq('niche', niche)
+            .eq('location', location)
+            .order('created_at', { ascending: false })
+            .limit(100);
+          
+          clearInterval(intervalId);
+          
+          if (contactsError) {
+            console.error("Failed to fetch contacts:", contactsError);
+            throw new Error("Failed to fetch results");
+          }
+          
+          return contacts || [];
+        }
+        
+        if (checkJob.status === 'failed') {
+          clearInterval(intervalId);
+          throw new Error("Search job failed");
+        }
+        
+        // Wait 1 second before checking again
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        attempts++;
+      }
+      
+      clearInterval(intervalId);
+      
+      if (attempts >= maxAttempts) {
+        throw new Error("Search job timed out");
+      }
+      
+      return [];
+    } catch (error) {
+      console.error("Search error:", error);
+      throw error;
+    }
   },
   
   // Generate CSV download for the results
@@ -50,41 +142,3 @@ export const contactFinderService = {
     return csvRows.join('\n');
   }
 };
-
-// Helper functions to generate mock data
-function generateMockSearchResults(niche: string, location: string): SearchResult[] {
-  const results: SearchResult[] = [];
-  const count = Math.floor(Math.random() * 10) + 10;
-  
-  for (let i = 0; i < count; i++) {
-    results.push({
-      title: `${niche} Business ${i + 1} in ${location}`,
-      url: `https://example${i}.com`,
-      snippet: `Contact ${niche} business in ${location}. Our services include...`
-    });
-  }
-  
-  return results;
-}
-
-function generateMockContacts(niche: string, location: string, count: number): ContactResult[] {
-  const domains = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'example.com'];
-  const socialPlatforms = ['facebook.com', 'twitter.com', 'linkedin.com', 'instagram.com'];
-  const results: ContactResult[] = [];
-  
-  for (let i = 0; i < count; i++) {
-    const businessName = `${niche} ${i + 1}`;
-    const domain = domains[Math.floor(Math.random() * domains.length)];
-    const socialPlatform = socialPlatforms[Math.floor(Math.random() * socialPlatforms.length)];
-    
-    results.push({
-      name: `${businessName} ${location}`,
-      email: `contact@${businessName.toLowerCase().replace(/\s+/g, '')}${i}.${domain}`,
-      phone: `+1${Math.floor(Math.random() * 900) + 100}${Math.floor(Math.random() * 900) + 100}${Math.floor(Math.random() * 9000) + 1000}`,
-      website: `https://www.${businessName.toLowerCase().replace(/\s+/g, '')}.com`,
-      socialMedia: `${socialPlatform}/${businessName.toLowerCase().replace(/\s+/g, '')}`
-    });
-  }
-  
-  return results;
-}

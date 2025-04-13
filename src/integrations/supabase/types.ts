@@ -9,7 +9,78 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      contact_results: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          id: string
+          location: string | null
+          name: string | null
+          niche: string | null
+          phone: string | null
+          social_media: string | null
+          website: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          location?: string | null
+          name?: string | null
+          niche?: string | null
+          phone?: string | null
+          social_media?: string | null
+          website?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          location?: string | null
+          name?: string | null
+          niche?: string | null
+          phone?: string | null
+          social_media?: string | null
+          website?: string | null
+        }
+        Relationships: []
+      }
+      search_jobs: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          current_step: string | null
+          id: string
+          location: string
+          niche: string
+          progress: number | null
+          status: string
+          status_message: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          current_step?: string | null
+          id?: string
+          location: string
+          niche: string
+          progress?: number | null
+          status?: string
+          status_message?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          current_step?: string | null
+          id?: string
+          location?: string
+          niche?: string
+          progress?: number | null
+          status?: string
+          status_message?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
