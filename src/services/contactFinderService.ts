@@ -101,7 +101,7 @@ export const contactFinderService = {
         
         if (checkJob.status === 'failed') {
           clearInterval(intervalId);
-          throw new Error("Search job failed");
+          throw new Error(checkJob.status_message || "Search job failed");
         }
         
         // Wait 1 second before checking again
